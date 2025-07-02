@@ -1,0 +1,52 @@
+services:
+
+  app:
+    build: . # Constrói a imagem a partir do Dockerfile na raiz
+    container_name: saudemais_api
+    restart: always
+    ports:
+      - "3000:3000" # Mapeia a porta 3000 do container para a porta 3000 do host
+    depends_on:
+      postgres: # Garante que o banco de dados inicie antes da API
+        condition: service_healthy
+    environment:
+      # Variáveis para conectar ao banco de dados
+      DB_HOST: postgres
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_PORT: 5432
+      # Chave secreta para o JWT
+      JWT_SECRET: ${JWT_SECRET_KEY}
+
+  # Banco de Dados PostgreSQL
+  postgres:
+    image: postgres:13-alpine
+    container_name: saudemais_database
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Adminer - Interface Web para o banco
+  adminer:
+    image: adminer:4.8.1
+    container_name: saudemais_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
